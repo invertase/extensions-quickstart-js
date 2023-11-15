@@ -1,4 +1,4 @@
-import { getDownloadURL, ref, uploadBytes, getStream } from 'firebase/storage';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { storageRef } from './helpers/firebase';
 
 const videoUpload = document.getElementById('video-upload') as HTMLInputElement;
