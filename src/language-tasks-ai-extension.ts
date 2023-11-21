@@ -70,7 +70,7 @@ function renderReviews(reviews: Review[]): string {
 // Handle mouse over events to update the stars display
 function handleMouseOver(event: MouseEvent, reviewIndex: number): void {
 	const target = event.target as HTMLElement;
-	const rating = parseInt(target.htmlFor.split('-')[2]);
+	const rating = parseInt((<any>target).htmlFor.split('-')[2]);
 	updateStars(reviewIndex, rating);
 }
 
