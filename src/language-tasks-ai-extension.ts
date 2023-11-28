@@ -1,6 +1,10 @@
 import { StorageReference, getDownloadURL, ref } from 'firebase/storage';
 import { storageRef, firestoreRef } from './helpers/firebase';
 import { addDoc, collection, doc, onSnapshot } from 'firebase/firestore';
+import { getDoc } from 'firebase/firestore';
+
+const inputText = document.getElementById('input-text') as HTMLInputElement;
+const submitText = document.getElementById('submit-text') as HTMLElement;
 type Review = {
 	text: string;
 	rating: number; // from 1 to 5
@@ -8,19 +12,81 @@ type Review = {
 
 // Example array of review objects
 const reviews: Review[] = [
-	{
-		text: 'I really enjoyed the water bottle, I just wish they carried this in a larger size as I go for long hikes. But overall the aesthetic, manufacturing, and functional design are great for what I needed.',
-		rating: 4, // Default rating set to 4
-	},
-	{
-		text: 'The water bottle was fine, although the design was a bit lacking and could be improved.',
-		rating: 3, // Default rating set to 3
-	},
-	{
-		text: "This is a truly incredible water bottle, I keep it with me all the time when I'm traveling and it has never let me down.",
-		rating: 5, // Default rating set to 5
-	},
+	// {
+	// 	text: 'I really enjoyed the water bottle, I just wish they carried this in a larger size as I go for long hikes. But overall the aesthetic, manufacturing, and functional design are great for what I needed.',
+	// 	rating: 4, // Default rating set to 4
+	// },
+
 ];
+
+inputText.addEventListener('input', (e: any) => {
+	const value = e.target?.value.trim();
+	if (value) {
+		submitText.removeAttribute('disabled');
+	}
+});
+
+submitText.addEventListener('click', handleSubmitText);
+let textForLanguageTasks;
+function handleSubmitText() {
+	if (inputText?.value?.trim()) {
+		submitText.setAttribute('disabled', 'true');
+		textForLanguageTasks = inputText.value.trim();
+
+		submitTextToFirestore(textForLanguageTasks);
+	}
+}
+
+function submitTextToFirestore(text: string) {
+	const textCollectionRef = collection(firestoreRef, 'generate');
+
+	addDoc(textCollectionRef, { comment: text })
+		.then((docRef) => {
+			setTimeout(() => {
+				// listenForConvertedAudio(docRef.id);
+				getCommentAndOutput(docRef.id);
+			}, 5000);
+
+			console.log('Text submitted for conversion:', docRef.id);
+		})
+		.catch((error) => {
+			submitText.removeAttribute('disabled');
+			console.log('Error submitting text:', error);
+		});
+}
+
+function getCommentAndOutput(docId: string) {
+	const docRef = doc(firestoreRef, 'generate', docId);
+
+	getDoc(docRef)
+		.then((doc) => {
+			if (doc.exists()) {
+				const comment = doc.data().comment;
+				const output = doc.data().output;
+
+				console.log('Comment:', comment);
+				console.log('Output:', output);
+
+				// Create a new review entry with the comment and output as values
+				const newReview: Review = {
+					text: comment,
+					rating: output || 3, // Use output as rating, default to 3 if output is not available
+				};
+
+				// Add the new review to the reviews array
+				reviews.push(newReview);
+
+				// Render the updated reviews
+				document.getElementById('reviews-container')!.innerHTML =
+					renderReviews(reviews);
+			} else {
+				console.log('Document not found');
+			}
+		})
+		.catch((error) => {
+			console.log('Error getting document:', error);
+		});
+}
 
 // Function to create a single star element
 function createStar(
@@ -52,6 +118,7 @@ function renderStars(
 }
 
 // Function to render the full list of reviews
+// Function to render the full list of reviews
 function renderReviews(reviews: Review[]): string {
 	return reviews
 		.map(
@@ -66,29 +133,3 @@ function renderReviews(reviews: Review[]): string {
 		)
 		.join('');
 }
-
-// Handle mouse over events to update the stars display
-function handleMouseOver(event: MouseEvent, reviewIndex: number): void {
-	const target = event.target as HTMLElement;
-	const rating = parseInt((<any>target).htmlFor.split('-')[2]);
-	updateStars(reviewIndex, rating);
-}
-
-// Handle mouse out events to reset the stars display
-function handleMouseOut(reviewIndex: number): void {
-	updateStars(reviewIndex, reviews[reviewIndex].rating);
-}
-
-// Update the display of stars for a specific review
-function updateStars(reviewIndex: number, hoverRating: number): void {
-	const reviewStars = document.querySelector(`#review-${reviewIndex} .flex`);
-	reviewStars!.innerHTML = renderStars(
-		reviewIndex,
-		reviews[reviewIndex].rating,
-		hoverRating
-	);
-}
-
-// Initial rendering of reviews
-document.getElementById('reviews-container')!.innerHTML =
-	renderReviews(reviews);
